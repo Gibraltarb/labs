@@ -1,0 +1,8 @@
+aiogram
+asyncpg
+matplotlib
+scipy
+numpy
+uncertainties
+pandas
+sympy
