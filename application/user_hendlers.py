@@ -266,9 +266,9 @@ async def func_new_measurement_done(message: Message, state: FSMContext):
     name = data["name"]
     id = data["msg_id"]
 
-    if len(name) > 20:
+    if (len(name) > 20) or (" " in name):
         await message.bot.delete_message(chat_id=message.chat.id, message_id=id.message_id)
-        msg = await message.answer(text="⚠️Пожалуйста, ограничьтесь 20 символами (не больше) ⚠️\n\n"
+        msg = await message.answer(text="⚠️Пожалуйста, ограничьтесь 20 символами (не больше) ⚠️(пробел нельзя)\n\n"
                                         "Запишите снова")
         await state.update_data(msg_id=msg)
     else:
@@ -418,9 +418,9 @@ async def func_new_measurement_save_to_series(message: Message, state: FSMContex
     id = data["msg_id"]
 
     series_name = data["series"]
-    if len(series_name) > 20:
+    if (len(series_name) > 20) or (" " in series_name):
         await message.bot.delete_message(chat_id=message.chat.id, message_id=id.message_id)
-        msg = await message.answer(text="⚠️Пожалуйста, ограничьтесь 20 символами (не больше) ⚠️\n\n"
+        msg = await message.answer(text="⚠️Пожалуйста, ограничьтесь 20 символами (не больше) ⚠️ (пробел нельзя)\n\n"
                                         "Запишите снова")
         await state.update_data(msg_id=msg)
     else:
@@ -449,7 +449,7 @@ async def func_new_measurement_select_folder(callback: CallbackQuery, state: FSM
     data = await state.get_data()
     id = data["msg_id"]
 
-    series = (callback.data.split(":", 1)[1]).replace("_", " ")
+    series = (callback.data.split(":", 1)[1])
     access = callback.from_user.id
 
     nominal_value = data["nominal_value"]
@@ -515,8 +515,7 @@ async def func_my_meas_quantity_selected(callback: CallbackQuery, state: FSMCont
     data = await state.get_data()
     msg_id = data["msg_id"]
 
-    quantity = callback.data.split(":")[1].replace("_", " ")
-    print(quantity)
+    quantity = callback.data.split(":")[1]
     name_postfix = callback.data.split(":")[2]
     await state.update_data(quantity=quantity)
     measurement = data["measurement"]
@@ -531,7 +530,6 @@ async def func_my_meas_quantity_selected(callback: CallbackQuery, state: FSMCont
         random_error_or_no_str = ""
         kb = await ukb.my_meas_in_series(measurement)
     else:
-        print(quantity)
         values, instrum_error = await dtf.get_from_measurement(user_id, measurement, quantity)
         VALUES_X = {quantity: array(values)}
         await state.update_data(VALUES_X=VALUES_X)
@@ -579,7 +577,7 @@ async def func_my_meas_select_series(callback: CallbackQuery, state: FSMContext)
     data = await state.get_data()
     msg = data["msg_id"]
 
-    series = (callback.data.split(":", 1)[1]).replace("_", " ")
+    series = (callback.data.split(":", 1)[1])
     await state.update_data(quantity=series)
 
     nominal_value = data["nominal_value"]
@@ -628,9 +626,9 @@ async def func_my_meas_added_to_new_ser(message: Message, state: FSMContext):
     data = await state.get_data()
     msg = data["msg_id"]
 
-    if len(message.text) > 20:
+    if (len(message.text) > 20) or " " in message.text:
         await message.bot.delete_message(chat_id=message.chat.id, message_id=msg.message_id)
-        msg = await message.answer(text="⚠️Пожалуйста, ограничьтесь 20 символами (не больше) ⚠️\n\n"
+        msg = await message.answer(text="⚠️Пожалуйста, ограничьтесь 20 символами (не больше) ⚠️(пробел нельзя)\n\n"
                                         "Запишите снова")
         await state.update_data(msg_id=msg)
 
@@ -694,7 +692,7 @@ async def func_selected_y(callback: CallbackQuery, state: FSMContext):
     msg = data["msg_id"]
 
     X_NAME = data["quantity"]
-    Y_NAME = callback.data.split(":")[1].replace("_", " ")
+    Y_NAME = callback.data.split(":")[1]
     await state.update_data(X_NAME=X_NAME)
     await state.update_data(Y_NAME=Y_NAME)
     postfix = callback.data.split(":")[2]
@@ -803,7 +801,6 @@ async def func_get_file(message: Message, state: FSMContext):
     file_bytes.seek(0)
     # buf = BytesIO()
     # buf.write(file_bytes.read())
-    print(file_bytes)
 
     try:
         if document.file_name.endswith(".csv"):

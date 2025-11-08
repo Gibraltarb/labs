@@ -86,7 +86,6 @@ async def new_measurement_witch_series(series_list):
     bilder = InlineKeyboardBuilder()
 
     for series in series_list:
-        series = series.replace(" ", "_")
         bilder.button(text=f"{series}", callback_data=f"cd_new_meas_add_to_ser:{series}")
     bilder.adjust(2)
     bilder.row(InlineKeyboardButton(text="Новая серия", callback_data="cd_new_meas_new_series"))
@@ -112,9 +111,8 @@ async def my_meas_witch_meas(measurements):
 async def my_meas_witch_quantity(quantities):
     bilder = InlineKeyboardBuilder()
     for quantity in quantities:
-        quantity_name = quantity.split(":")[0].replace(" ", "_")
-        postfix = quantity.split(":")[1]
-        bilder.button(text=f"{quantity_name}", callback_data=f"cd_my_meas_quantity:{quantity}:{postfix}")
+        quantity_name = quantity.split(":")[0]
+        bilder.button(text=f"{quantity_name}", callback_data=f"cd_my_meas_quantity:{quantity}")
     bilder.adjust(2)
     bilder.row(InlineKeyboardButton(text="Назад", callback_data="cd_my_meas"),
                InlineKeyboardButton(text="Меню", callback_data="cd_main_menu"))
@@ -148,7 +146,6 @@ async def my_meas_witch_series(series_list):
     bilder = InlineKeyboardBuilder()
 
     for series in series_list:
-        series = series.replace(" ", "_")
         bilder.button(text=f"{series}", callback_data=f"cd_my_meas_add_to_ser:{series}")
     bilder.adjust(2)
     bilder.row(InlineKeyboardButton(text="Новая серия", callback_data="cd_my_meas_new_series"))
@@ -157,11 +154,10 @@ async def my_meas_witch_series(series_list):
 async def my_meas_witch_y(quantities, quantity):
     bilder = InlineKeyboardBuilder()
     for quantity in quantities:
-        quantity_name = quantity.split(":")[0].replace(" ", "_")
-        postfix = quantity.split(":")[1]
-        bilder.button(text=f"{quantity_name}", callback_data=f"cd_my_meas_y:{quantity}:{postfix}")
+        quantity_name = quantity.split(":")[0]
+        bilder.button(text=f"{quantity_name}", callback_data=f"cd_my_meas_y:{quantity}")
     bilder.adjust(2)
-    bilder.row(InlineKeyboardButton(text="Назад", callback_data=f"cd_my_meas_quantity:{quantity}:{postfix}"),
+    bilder.row(InlineKeyboardButton(text="Назад", callback_data=f"cd_my_meas_quantity:{quantity}"),
                InlineKeyboardButton(text="Меню", callback_data="cd_main_menu"))
     return bilder.as_markup()
 
