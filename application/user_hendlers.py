@@ -479,7 +479,6 @@ async def func_my_meas_no_meas(callback: CallbackQuery):
 
 @router.callback_query(F.data == "cd_my_meas")
 async def func_my_meas(callback: CallbackQuery, state: FSMContext):
-    await state.set_state(st.MyMeasurements.start)
     user_id = callback.from_user.id
     measurements = await dtf.get_measurements(user_id)
     msg = await callback.message.edit_text(text="Выберите запись 💾",
@@ -720,6 +719,7 @@ async def func_selected_y(callback: CallbackQuery, state: FSMContext):
 async def func_do_approx(callback: CallbackQuery, state: FSMContext):
     await callback.answer(text="Обработка...")
     data = await state.get_data()
+    user_id = callback.from_user.id
     msg = data["msg_id"]
 
     X_NAME, Y_NAME = data["X_NAME"], data["Y_NAME"]
@@ -735,8 +735,31 @@ async def func_do_approx(callback: CallbackQuery, state: FSMContext):
 
     APPROX_BYTES_FLOW = await MeasurementProcess(VALUES).approx(dependence=dependence,
                                                                 function=function)
-    GRAPHIC = BufferedInputFile(APPROX_BYTES_FLOW.getvalue(), filename="graphic.png")
     await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=msg.message_id)
+
+    if APPROX_BYTES_FLOW == "length mismatch error":
+        measurements = await dtf.get_measurements(user_id)
+        msg = await callback.message.answer(text="⚠️<b>Длина зависимых и независимых величин должна быть одинаковой."
+                                                 "</b>⚠️",
+                                            reply_markup=await ukb.my_meas_witch_meas(measurements),
+                                            parse_mode="HTML",
+                                            disable_notification=True)
+        await state.clear()
+        await state.update_data(msg_id=msg)
+        return
+    if APPROX_BYTES_FLOW == "too few points error":
+        msg = await callback.message.answer(text="⚠️<b>Количество точек должно быть больше количества искомых "
+                                                 "параметров.</b>⚠️\n\nВыберите функцию зависимости или отправьте "
+                                                 "прямо сюда другую функцию. \n\n<i>В инструкции на последней странице "
+                                                 "показано, как правильно вводить функцию (буквально так, как будто вы "
+                                                 "вводите выражение на Python).</i>",
+                                            reply_markup=await ukb.my_meas_select_func_for_approx(X_NAME, Y_NAME),
+                                            parse_mode="HTML",
+                                            disable_notification=True)
+        await state.update_data(msg_id=msg)
+        return
+
+    GRAPHIC = BufferedInputFile(APPROX_BYTES_FLOW.getvalue(), filename="graphic.png")
     await callback.message.answer_photo(photo=GRAPHIC,
                                         caption="<i>Картинка не удалится из этого чата</i>",
                                         reply_markup=await ukb.new_meas_approx_done(measurement),
@@ -759,8 +782,28 @@ async def func_do_approx_by_user_func(message: Message, state: FSMContext):
     try:
         APPROX_BYTES_FLOW = await MeasurementProcess(VALUES).approx(dependence=dependence,
                                                                     function=function)
-        GRAPHIC = BufferedInputFile(APPROX_BYTES_FLOW.getvalue(), filename="graphic.png")
         await message.bot.delete_message(chat_id=message.chat.id, message_id=msg.message_id)
+
+        if APPROX_BYTES_FLOW == "length mismatch error":
+            msg = await message.answer(text="⚠️<b>Длина зависимых и независимых величин должна быть одинаковой</b>.⚠️",
+                                       reply_markup=await ukb.my_meas_select_func_for_approx(X_NAME, Y_NAME),
+                                       parse_mode="HTML",
+                                       disable_notification=True)
+            await state.update_data(msg_id=msg)
+            return
+        if APPROX_BYTES_FLOW == "too few points error":
+            msg = await message.answer(text="⚠️<b>Количество точек должно быть больше количества искомых параметров</b>"
+                                            ".⚠️\n\nВыберите функцию зависимости или отправьте прямо сюда другую "
+                                            "функцию. \n\n<i>В инструкции на последней странице показано, как "
+                                            "правильно вводить функцию (буквально так, как будто вы вводите "
+                                            "выражение на Python).</i>",
+                                       reply_markup=await ukb.my_meas_select_func_for_approx(X_NAME, Y_NAME),
+                                       parse_mode="HTML",
+                                       disable_notification=True)
+            await state.update_data(msg_id=msg)
+            return
+
+        GRAPHIC = BufferedInputFile(APPROX_BYTES_FLOW.getvalue(), filename="graphic.png")
         await message.answer_photo(photo=GRAPHIC,
                                    caption="<i>Картинка не удалится из этого чата</i>",
                                    reply_markup=await ukb.new_meas_approx_done(measurement),
@@ -768,6 +811,8 @@ async def func_do_approx_by_user_func(message: Message, state: FSMContext):
         msg = "don't delete"
         await state.update_data(msg_id=msg)
     except ValueError:
+        await message.delete()
+        await message.bot.delete_message(chat_id=message.chat.id, message_id=msg.message_id)
         photo = FSInputFile("application/assets/Instruction/page6.png")
         msg = await message.answer_photo(photo=photo,
                                          caption="Ой! Похоже вы ввели функцию не так, как положено:(\n"

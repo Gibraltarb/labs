@@ -17,7 +17,6 @@ class NewMeasurement(StatesGroup):
     waiting_for_series_name = State()
 
 class MyMeasurements(StatesGroup):
-    start = State()
     waiting_for_series_name = State()
     waiting_for_approx_function = State()
 

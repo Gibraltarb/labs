@@ -144,11 +144,11 @@ class MeasurementProcess(dict):
 
         from uncertainties.umath import __dict__ as ufuncs
 
+        numpy_things = ["np", "e", "pi", "log", "sin", "cos", "exp", "sqrt", "inf", "acos", "asin", "atan"]
         tree = ast.parse(function, mode="eval")
         quantities = {node.id for node in ast.walk(tree)
                       if isinstance(node, ast.Name)
-                      and node.id != "e"
-                      and node.id != "pi"
+                      and node.id not in numpy_things
                       }
         u_quantities = {}
         for quantity in quantities:
@@ -177,12 +177,10 @@ class MeasurementProcess(dict):
         :return: A picture with a graph, a function, a correlation coefficient, and points.
                  All of this is encoded in a byte flow
         """
-        # if len(self.measurement["x"]) or len(self.measurement["y"]) < 4:
-        #     raise ValueError("СЛИШКОМ МАЛО ДАННЫХ")
-        # if len(self.measurement["x"]) != len(self.measurement["y"]):
-        #     raise ValueError("РАЗНОЕ КОЛИЧЕСТВО ЗНАЧЕНИЙ ЗАВИСИМОЙ И НЕЗАВИСИМОЙ ПЕРЕМЕННОЙ")
+
         DRAW_X_ERRORBAR = False
         DRAW_Y_ERRORBAR = False
+        print(1)
         try:
             x_quantity = dependence[0]
             y_quantity = dependence[1]
@@ -209,9 +207,15 @@ class MeasurementProcess(dict):
                 y_data = self.measurement[y_quantity]
 
         except: raise ValueError("Одна из переменных не была найдена. Не удалось построить зависимость")
+        print(2)
 
         if f"{x_quantity}" not in function:
             raise ValueError("В функции не обнаружена независимая величина, выбранная пользователем")
+        print(3)
+
+        if len(x_data) != len(y_data):
+            return "length mismatch error"
+        print(4)
 
         if "=" in function:
             function = function.split("=", 1)[1].strip()
@@ -223,6 +227,11 @@ class MeasurementProcess(dict):
                              and node.id != x_quantity
                              and node.id not in numpy_things
                              })
+
+        print(quantities)
+        if len(quantities) + 1 > len(x_data):
+            return "too few points error"
+
         lambda_code = f"lambda {', '.join([x_quantity] + quantities)}: {function}"
         f = eval(lambda_code, {"np": np, "e": np.e, "pi": np.pi, "log": np.log, "sin": np.sin, "cos": np.cos,
                                "exp": np.exp, "sqrt": np.sqrt, "inf": np.inf, "acos": np.acos, "asin": np.asin,
