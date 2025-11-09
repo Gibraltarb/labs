@@ -483,7 +483,7 @@ async def func_my_meas(callback: CallbackQuery, state: FSMContext):
     measurements = await dtf.get_measurements(user_id)
     msg = await callback.message.edit_text(text="Выберите запись 💾",
                                            reply_markup=await ukb.my_meas_witch_meas(measurements),
-                                           parse_mode="HTML",)
+                                           parse_mode="HTML")
     await state.update_data(msg_id=msg)
 
 @router.callback_query(F.data.startswith("cd_my_meas_witch_meas:"))
@@ -507,7 +507,7 @@ async def func_my_meas_quantities(callback: CallbackQuery, state: FSMContext):
                                         reply_markup=await ukb.my_meas_witch_quantity(quantities),
                                         parse_mode="HTML",
                                         disable_notification=True)
-    await state.update_data(msg_id=msg)
+    await state.update_data(msg_id=msg, measurement=measurement)
 
 @router.callback_query(F.data.startswith("cd_my_meas_quantity:"))
 async def func_my_meas_quantity_selected(callback: CallbackQuery, state: FSMContext):
@@ -740,7 +740,7 @@ async def func_do_approx(callback: CallbackQuery, state: FSMContext):
     if APPROX_BYTES_FLOW == "length mismatch error":
         measurements = await dtf.get_measurements(user_id)
         msg = await callback.message.answer(text="⚠️<b>Длина зависимых и независимых величин должна быть одинаковой."
-                                                 "</b>⚠️",
+                                                 "</b>⚠️ Выберите заново",
                                             reply_markup=await ukb.my_meas_witch_meas(measurements),
                                             parse_mode="HTML",
                                             disable_notification=True)
@@ -1041,6 +1041,48 @@ async def func_get_new_set_param(message: Message, state: FSMContext):
 
 """SETTINGS END"""
 
+"""DELETER"""
 
+@router.callback_query(F.data == "cd_my_meas_del_exp")
+async def func_delete_experiment(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
 
+    msg = data["msg_id"]
+    measurement = data["measurement"]
 
+    await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=msg.message_id)
+    msg = await callback.message.answer(text=f"<b>Точно удалить эксперимент {measurement}?</b>",
+                                        reply_markup=ukb.sure_delete_exp,
+                                        parse_mode="HTML",
+                                        disable_notification=False)
+    await state.update_data(msg_id=msg)
+
+@router.callback_query(F.data == "cd_sure_delete_exp")
+async def func_sure_delete_exp(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+
+    msg = data["msg_id"]
+    measurement = data["measurement"]
+    access = callback.from_user.id
+
+    await dtf.delete_exp(measurement, access)
+    measurements = await dtf.get_measurements(access)
+    await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=msg.message_id)
+    msg = await callback.message.answer(text="Успешно!\nВыберите запись 💾",
+                                        reply_markup=await ukb.my_meas_witch_meas(measurements),
+                                        parse_mode="HTML",
+                                        disable_notification=False)
+    await state.update_data(msg_id=msg)
+
+@router.callback_query(F.data == "cd_sure_not_delete_exp")
+async def func_sure_delete_exp(callback: CallbackQuery, state: FSMContext):
+    msg = (await state.get_data())["msg_id"]
+    access = callback.from_user.id
+
+    measurements = await dtf.get_measurements(access)
+    await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=msg.message_id)
+    msg = await callback.message.answer(text="Выберите запись 💾",
+                                        reply_markup=await ukb.my_meas_witch_meas(measurements),
+                                        parse_mode="HTML",
+                                        disable_notification=True)
+    await state.update_data(msg_id=msg)

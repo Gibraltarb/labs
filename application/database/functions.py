@@ -1,9 +1,6 @@
 import asyncpg
 import asyncio
 
-from sympy.multipledispatch.dispatcher import ambiguity_warn
-from uncertainties import nominal_value
-
 from cessing.config import DB_CONFIG
 
 async def write_new_user(telegram_id):
@@ -94,6 +91,12 @@ async def write_series(measurement: str, quantity: str, nominal_value: list, err
 
     await conn.close()
 
+async def delete_series(measurement, quantity, access):
+    conn = await asyncpg.connect(**DB_CONFIG)
+    await conn.execute("""
+    DELETE FROM series WHERE measurement = $1 AND quantity = $2 AND access = $3
+    """, measurement, quantity, access)
+
 async def update_series(access, measurement, quantity, nominal_value, error):
     conn = await asyncpg.connect(**DB_CONFIG)
     row = await conn.fetchrow("""
@@ -159,6 +162,23 @@ async def update_settings(telegram_id, new_param, param):
     await conn.execute(f"""
     UPDATE settings SET {param} = $2 WHERE telegram_id = $1""",
                        telegram_id, new_param)
+
+async def delete_exp(measurement: str, access):
+    conn = await asyncpg.connect(**DB_CONFIG)
+
+    await conn.execute("""
+    DELETE FROM series WHERE measurement = $1 AND access = $2
+    """, measurement, access)
+
+    await conn.execute("""
+        DELETE FROM measurements WHERE measurement = $1 AND access = $2
+        """, measurement, access)
+
+    measurements = (await conn.fetchrow("""SELECT * FROM users WHERE telegram_id = $1""",
+                                        access))["measurements"]
+    measurements.remove(f"{measurement}")
+
+    await conn.execute("""UPDATE users SET measurements = $1 WHERE telegram_id = $2""", measurements, access)
 
 
 

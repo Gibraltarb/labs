@@ -116,6 +116,7 @@ async def my_meas_witch_quantity(quantities):
     bilder.adjust(2)
     bilder.row(InlineKeyboardButton(text="Назад", callback_data="cd_my_meas"),
                InlineKeyboardButton(text="Меню", callback_data="cd_main_menu"))
+    bilder.row(InlineKeyboardButton(text=f"Удалить эксперимент", callback_data=f"cd_my_meas_del_exp"))
     return bilder.as_markup()
 
 async def my_meas_in_measurement(measurement):
@@ -124,7 +125,8 @@ async def my_meas_in_measurement(measurement):
         [InlineKeyboardButton(text="Записать в серию", callback_data="cd_my_meas_add_to_series")],
         [InlineKeyboardButton(text="Зависимая величина 🔎", callback_data="cd_my_meas_select_y")],
         [InlineKeyboardButton(text="Назад", callback_data=f"cd_my_meas_witch_meas:{measurement}"),
-         InlineKeyboardButton(text="Меню", callback_data="cd_main_menu")]
+         InlineKeyboardButton(text="Меню", callback_data="cd_main_menu")],
+        [InlineKeyboardButton(text=f"Удалить", callback_data=f"cd_my_meas_del_meas")]
     ])
     return kb
 
@@ -138,7 +140,8 @@ async def my_meas_in_series(measurement):
     kb = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="Зависимая величина 🔎", callback_data="cd_my_meas_select_y")],
         [InlineKeyboardButton(text="Назад", callback_data=f"cd_my_meas_witch_meas:{measurement}"),
-         InlineKeyboardButton(text="Меню", callback_data="cd_main_menu")]
+         InlineKeyboardButton(text="Меню", callback_data="cd_main_menu")],
+        [InlineKeyboardButton(text=f"Удалить", callback_data=f"cd_my_meas_del_ser")]
     ])
     return kb
 
@@ -202,3 +205,10 @@ settings_param = InlineKeyboardMarkup(inline_keyboard=[
 
 
 """SETTINGS END"""
+
+"""deleter"""
+sure_delete_exp = InlineKeyboardMarkup(inline_keyboard=[
+    [InlineKeyboardButton(text="Да", callback_data="cd_sure_delete_exp"),
+     InlineKeyboardButton(text="Нет", callback_data="cd_sure_not_delete_exp"),
+     InlineKeyboardButton(text="Нет!!", callback_data="cd_sure_not_delete_exp")]
+])
