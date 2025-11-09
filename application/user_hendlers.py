@@ -361,26 +361,49 @@ async def func_new_measurement_save(message: Message, state: FSMContext):
         msg = await message.answer(text="⚠️Пожалуйста, ограничьтесь 20 символами (не больше) ⚠️\n\n"
                                         "Запишите снова")
         await state.update_data(msg_id=msg)
-    else:
-        await dtf.write_measurement(measurement, quantity, value, instrum_err, access)
-    
-        confidence = float((await dtf.get_settings(access))["confidence"])
-        _, nominal_value, error = await MeasurementProcess({quantity: array(value)}).random_error(quantity=quantity,
-                                                                                       instrument_error=instrum_err,
-                                                                                       confidence=confidence)
-    
+        return
+
+    if len((await dtf.get_measurements(access))) >= 5:
+        data = await state.get_data()
+        nums = data.get("nums", [])
+        nums_string = "\n".join([str(x) for x in nums])
+        name = data["name"]
+        id = data["msg_id"]
+
+        user_id = message.from_user.id
+        measurements = await dtf.get_measurements(user_id)
+
         await message.bot.delete_message(chat_id=message.chat.id, message_id=id.message_id)
         await message.delete()
-        msg = await message.answer(text="Запись сохранена!\n\n"
-                                        "Случайная погрешность:\n"
-                                        f"<i>{nominal_value} +/- {error}</i>\n\n"
-                                        "Можете также сохранить запись в серию",
-                                   reply_markup=ukb.just_added_new_measurement_menu,
+        msg = await message.answer(text=f"⚠️Лимит (5) экспериментов исчерпан. Удалите некоторые. ⚠️\n\n"
+                                        f"Введённые значения {name}:\n"
+                                        f"{nums_string}\n"
+                                        f"Выберите, в какую папку сохранить запись",
+                                   reply_markup=await ukb.new_measurement_witch_folder(measurements),
                                    parse_mode="HTML",
                                    disable_notification=True)
-        await state.update_data(nominal_value=nominal_value)
-        await state.update_data(error=error)
         await state.update_data(msg_id=msg)
+        return
+
+    await dtf.write_measurement(measurement, quantity, value, instrum_err, access)
+
+    confidence = float((await dtf.get_settings(access))["confidence"])
+    _, nominal_value, error = await MeasurementProcess({quantity: array(value)}).random_error(quantity=quantity,
+                                                                                   instrument_error=instrum_err,
+                                                                                   confidence=confidence)
+
+    await message.bot.delete_message(chat_id=message.chat.id, message_id=id.message_id)
+    await message.delete()
+    msg = await message.answer(text="Запись сохранена!\n\n"
+                                    "Случайная погрешность:\n"
+                                    f"<i>{nominal_value} +/- {error}</i>\n\n"
+                                    "Можете также сохранить запись в серию",
+                               reply_markup=ukb.just_added_new_measurement_menu,
+                               parse_mode="HTML",
+                               disable_notification=True)
+    await state.update_data(nominal_value=nominal_value)
+    await state.update_data(error=error)
+    await state.update_data(msg_id=msg)
 
 """NEW MEASUREMENT HALF-END"""
 
@@ -906,8 +929,19 @@ async def func_get_file_get_folder_name(message: Message, state: FSMContext):
         await state.update_data(msg_id=msg)
         return
 
-    MEASUREMENTS = data["MEASUREMENTS_FROM_FILE"]
     access = message.from_user.id
+    if len((await dtf.get_measurements(access))) >= 5:
+        folders = await dtf.get_measurements(message.from_user.id)
+        await message.delete()
+        await message.bot.delete_message(chat_id=message.chat.id, message_id=msg.message_id)
+        msg = await message.answer(text="⚠️Лимит (5) экспериментов исчерпан. Удалите некоторые. ⚠️\n\n"
+                                        "Выберите, куда добавить данные файла.",
+                                   reply_markup=await ukb.get_file_witch_folder(folders),
+                                   parse_mode="HTML")
+        await state.update_data(msg_id=msg)
+        return
+
+    MEASUREMENTS = data["MEASUREMENTS_FROM_FILE"]
     instrum_err = (await dtf.get_settings(access))["confidence"]
     for quantity, quant_data in MEASUREMENTS.items():
         await dtf.write_measurement(folder_name, quantity, quant_data, instrum_err, access)
