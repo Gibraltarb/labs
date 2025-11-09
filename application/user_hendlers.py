@@ -541,8 +541,7 @@ async def func_my_meas_quantity_selected(callback: CallbackQuery, state: FSMCont
                                                                                                    confidence)
         random_error_or_no_str = f"Случайная погрешность:\n<i>{nominal_value} +/- {error}</i>\n\n"
 
-        await state.update_data(nominal_value=nominal_value)
-        await state.update_data(error=error)
+        await state.update_data(nominal_value=nominal_value, error=error)
         kb = await ukb.my_meas_in_measurement(measurement)
 
     await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=msg_id.message_id)
@@ -1083,6 +1082,91 @@ async def func_sure_delete_exp(callback: CallbackQuery, state: FSMContext):
     await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=msg.message_id)
     msg = await callback.message.answer(text="Выберите запись 💾",
                                         reply_markup=await ukb.my_meas_witch_meas(measurements),
+                                        parse_mode="HTML",
+                                        disable_notification=True)
+    await state.update_data(msg_id=msg)
+
+""""""
+
+@router.callback_query(F.data.startswith("cd_my_meas_del_ms:"))
+async def func_delete_measurement(callback: CallbackQuery, state: FSMContext):
+    what_delete = callback.data.split(":")[1]
+    if what_delete == "meas":
+        data = await state.get_data()
+
+        msg = data["msg_id"]
+        quantity = data["quantity"]
+
+        await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=msg.message_id)
+        msg = await callback.message.answer(text=f"<b>Точно удалить запись {quantity}?</b>",
+                                            reply_markup=ukb.sure_delete_meas,
+                                            parse_mode="HTML",
+                                            disable_notification=False)
+        await state.update_data(msg_id=msg)
+    if what_delete == "ser":
+        data = await state.get_data()
+
+        msg = data["msg_id"]
+        quantity = data["quantity"]
+
+        await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=msg.message_id)
+        msg = await callback.message.answer(text=f"<b>Точно удалить запись {quantity}?</b>",
+                                            reply_markup=ukb.sure_delete_ser,
+                                            parse_mode="HTML",
+                                            disable_notification=False)
+        await state.update_data(msg_id=msg)
+
+@router.callback_query(F.data.startswith("cd_sure_delete_ms:"))
+async def func_sure_delete_meas(callback: CallbackQuery, state: FSMContext):
+    what_delete = callback.data.split(":")[1]
+    data = await state.get_data()
+
+    msg_id = data["msg_id"]
+    measurement = data["measurement"]
+    quantity = data["quantity"]
+    user_id = callback.from_user.id
+    if what_delete == "meas":
+        await dtf.delete_measurement(user_id, measurement, quantity)
+    if what_delete == "ser":
+        await dtf.delete_series(measurement, quantity, user_id)
+
+    series_list = await dtf.get_series_list(user_id, measurement)
+    series_list = [(series + ":s") for series in series_list]
+    quantities_list = await dtf.get_quantities(user_id, measurement)
+    quantities_list = [(quantity + ":m") for quantity in quantities_list]
+
+    quantities = series_list + quantities_list
+    if msg_id != "don't delete":
+        await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=msg_id.message_id)
+    msg = await callback.message.answer(text="Успешно! С какой переменной работать?\n\n"
+                                             "Если нужно построить график аппроксимирующей функции, то сейчас выберите "
+                                             "независимую величину <i>(ось х)</i>",
+                                        reply_markup=await ukb.my_meas_witch_quantity(quantities),
+                                        parse_mode="HTML",
+                                        disable_notification=True)
+    await state.update_data(msg_id=msg)
+
+
+@router.callback_query(F.data == "cd_sure_not_delete_ms")
+async def func_sure_not_delete_meas(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+
+    msg_id = data["msg_id"]
+    measurement = data["measurement"]
+    user_id = callback.from_user.id
+
+    series_list = await dtf.get_series_list(user_id, measurement)
+    series_list = [(series + ":s") for series in series_list]
+    quantities_list = await dtf.get_quantities(user_id, measurement)
+    quantities_list = [(quantity + ":m") for quantity in quantities_list]
+
+    quantities = series_list + quantities_list
+    if msg_id != "don't delete":
+        await callback.bot.delete_message(chat_id=callback.message.chat.id, message_id=msg_id.message_id)
+    msg = await callback.message.answer(text="С какой переменной работать?\n\n"
+                                             "Если нужно построить график аппроксимирующей функции, то сейчас выберите "
+                                             "независимую величину <i>(ось х)</i>",
+                                        reply_markup=await ukb.my_meas_witch_quantity(quantities),
                                         parse_mode="HTML",
                                         disable_notification=True)
     await state.update_data(msg_id=msg)
