@@ -3,7 +3,7 @@ import asyncio
 
 from cessing.config import DB_CONFIG
 
-async def write_new_user(telegram_id):
+async def write_new_user(telegram_id, username):
     conn = await asyncpg.connect(**DB_CONFIG)
     measurements = []
     rows = await conn.fetch("""
@@ -12,10 +12,18 @@ async def write_new_user(telegram_id):
     ids = [row["telegram_id"] for row in rows]
     if telegram_id not in ids:
         await conn.execute("""
-        INSERT INTO users (telegram_id, measurements)
-        VALUES ($1, $2)
-        """, telegram_id, measurements)
+        INSERT INTO users (telegram_id, measurements, username)
+        VALUES ($1, $2, $3)
+        """, telegram_id, measurements, username)
     await conn.close()
+
+async def get_users():
+    conn = await asyncpg.connect(**DB_CONFIG)
+    rows = await conn.fetch("""SELECT * FROM users""")
+    str = ""
+    for row in rows:
+        str += f"{row['username']} - {row['measurements']}\n"
+    return str
 
 async def write_measurement(measurement: str, quantity: str, value: list, instrum_err: float, access: int):
     conn = await asyncpg.connect(**DB_CONFIG)
@@ -179,6 +187,8 @@ async def delete_exp(measurement: str, access):
     measurements.remove(f"{measurement}")
 
     await conn.execute("""UPDATE users SET measurements = $1 WHERE telegram_id = $2""", measurements, access)
+
+
 
 
 

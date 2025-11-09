@@ -53,7 +53,8 @@ async def create_table_users():
     await conn.execute(f"""
         CREATE TABLE IF NOT EXISTS {table_name} (
             telegram_id BIGINT PRIMARY KEY,
-            measurements TEXT[]
+            measurements TEXT[],
+            username TEXT
             )
         """)
     print(f"Таблица {table_name} создана")
@@ -121,8 +122,29 @@ async def create_table_settings():
     print(f"Таблица {table_name} создана")
     await conn.close()
 
+# async def create_table_stats():
+#     conn = await asyncpg.connect(
+#         database=NEW_DB,
+#         user=NEW_USER,
+#         password=NEW_PASS,
+#         host=HOST,
+#         port=PORT
+#         )
+#     table_name = "stats"
+#     await conn.execute("""
+#         CREATE TABLE IF NOT EXISTS stats (
+#             telegram_id BIGINT,
+#             username TEXT,
+#             last_activity TIMESTAMP,
+#             pics INT
+#             )
+#         """)
+#     print(f"Таблица {table_name} создана")
+#     await conn.close()
+
 asyncio.run(create_database())
 asyncio.run(create_table_users())
 asyncio.run(create_table_settings())
 asyncio.run(create_table_measurements())
 asyncio.run(create_table_series())
+# asyncio.run(create_table_stats())

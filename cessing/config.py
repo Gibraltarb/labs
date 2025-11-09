@@ -1,4 +1,5 @@
 TOKEN = "8485910695:AAGlft3nm8yKWOjNBHXQdjaz7ia8O4weKjI"
+adm_id = "1092868977"
 
 BD_SUPERUSER = "postgres"
 BD_SUPERPASS = "Uncertainties@%124143"

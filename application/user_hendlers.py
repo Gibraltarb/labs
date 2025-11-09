@@ -1,18 +1,15 @@
-from operator import setitem
-
-from aiofiles.os import access
 from aiogram import F, Router
 from aiogram.filters import CommandStart, Command, StateFilter
 from aiogram.types import Message, CallbackQuery, FSInputFile, InputMediaPhoto, BufferedInputFile
 from aiogram.fsm.context import FSMContext
 from numpy import array
 from uncertainties import ufloat
-from io import BytesIO
 
 from application import user_keyboards as ukb
 from application import states as st
 from application.database import functions as dtf
 from application.measurementClasses import MeasurementLoader, MeasurementProcess
+from cessing.config import adm_id
 
 router = Router()
 
@@ -27,15 +24,55 @@ async def cmd_start(message: Message, state: FSMContext):
     await message.answer_photo(photo=photo,
                                disable_notification=True)
     await message.delete()
-    id = message.from_user.id
+    id, username = message.from_user.id, message.from_user.username
     msg = await message.answer(text=f"<code>Добро пожаловать в Cessing!</code>\n\n"
                                     f"Чтобы удобно и быстро работать с ботом, посмотрите короткую инструкцию.",
                                reply_markup=ukb.start,
                                parse_mode="HTML",
                                disable_notification=True)
     await state.update_data(msg_id=msg)
-    await dtf.write_new_user(id)
+    await dtf.write_new_user(id, username)
     await dtf.write_settings(0.950, ",", id)
+
+@router.message(Command("menu"))
+async def cmd_menu(message: Message, state: FSMContext):
+    await message.delete()
+    msg = (await state.get_data())["msg_id"]
+    if msg != "don't delete":
+        await message.bot.delete_message(chat_id=message.chat.id, message_id=msg.message_id)
+    msg = await message.answer(text="Отправьте файл или воспользуйтесь кнопками.",
+                               reply_markup=ukb.main_menu,
+                               parse_mode="HTML",
+                               disable_notification=True)
+    await state.update_data(msg_id=msg)
+    await state.set_state(st.MainMenu.waiting_for_file)
+
+@router.message(Command("stats"))
+async def cmd_stats(message: Message, state: FSMContext):
+    await message.delete()
+    if message.from_user.id == int(adm_id):
+        stats = await dtf.get_users()
+
+        msg = (await state.get_data())["msg_id"]
+        if msg != "don't delete":
+            await message.bot.delete_message(chat_id=message.chat.id, message_id=msg.message_id)
+        msg = await message.answer(text=f"{stats}\n"
+                                        f"Отправьте файл или воспользуйтесь кнопками.",
+                                   reply_markup=ukb.main_menu,
+                                   parse_mode="HTML",
+                                   disable_notification=True)
+        await state.update_data(msg_id=msg)
+        await state.set_state(st.MainMenu.waiting_for_file)
+    else:
+        msg = (await state.get_data())["msg_id"]
+        if msg != "don't delete":
+            await message.bot.delete_message(chat_id=message.chat.id, message_id=msg.message_id)
+        msg = await message.answer(text="Отправьте файл или воспользуйтесь кнопками.",
+                                   reply_markup=ukb.main_menu,
+                                   parse_mode="HTML",
+                                   disable_notification=True)
+        await state.update_data(msg_id=msg)
+        await state.set_state(st.MainMenu.waiting_for_file)
 
 @router.callback_query(F.data == "cd_empty")
 async def func_empty_data(callback: CallbackQuery):
